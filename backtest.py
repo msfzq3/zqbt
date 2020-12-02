@@ -106,7 +106,6 @@ for sym in sym_list:
     sym_pool.append(ss)
 '''
 sym_pool = ['600030.SH','000001.SZ','600999.SH']
-#sym_pool = ['002736.SZ','600999.SH','688001.SH']
 #sym_pool = ['600999.SH']
 
 # 设置回测：股票池、基准、回测起止时间
