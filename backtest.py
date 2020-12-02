@@ -119,8 +119,8 @@ dict_CI = {"symbol_list":sym_pool,
            'commission_rate':0.0003,
            'min_commission':5}
 
-bt1 = backtest('D:/PYTHON/py_bt/sym_data',ContextInfo(dict_CI),strategy.SimpleMovingAverage)
-#bt1 = backtest('D:/PYTHON/py_bt/sym_data',ContextInfo(dict_CI),strategy.MachineLearning)
+bt1 = backtest('.../sym_data',ContextInfo(dict_CI),strategy.SimpleMovingAverage)
+#bt1 = backtest('.../sym_data',ContextInfo(dict_CI),strategy.MachineLearning)
 bt1.run()
 bt1.download_data()
 bt1.get_performance()
