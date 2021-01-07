@@ -5,6 +5,7 @@ import pandas as pd
 
 from event import FillEvent
 import datetime
+import math
 
 class ExecutionHandler(object, metaclass=ABCMeta):
     """
@@ -34,8 +35,9 @@ class SimulatedExecution(ExecutionHandler):
         self.portfolio = portfolio
         self.commission_rate = ContextInfo.commission_rate
         self.min_commission = ContextInfo.min_commission
-        self.execution_records = pd.DataFrame(
-            columns=['date_time','symbol','order_price','order_amount','commission'])
+        #self.execution_records = pd.DataFrame(
+        #    columns=['date_time','symbol','order_price','order_amount','commission'])
+        self.execution_records = []
 
     def update_temp_pos(self):
         """
@@ -64,7 +66,16 @@ class SimulatedExecution(ExecutionHandler):
 
         # 判断是否停牌
         if self.bars.is_suspended_stock(symbol):
-            print("[%s]Time：%s，Symbol：%s，Stock Suspended！"%(cur_date,bar_date,symbol))
+            print("[%s][股票当日停牌]Time：%s，Symbol：%s，Stock Suspended！"%(cur_date,bar_date,symbol))
+            return
+
+        # 判断是否涨/跌停（注意：未考虑创业/科创板的20%涨跌停及ST股的5%涨跌停）
+        # 如果涨停买入或跌停卖出，则委托无效，不进行撮合
+        if self.bars.get_latest_bar(symbol)['pct_chg'] >= 9.98 and order_amount > 0:
+            print("[%s][股票当日涨停]Time：%s，Symbol：%s，Trade Limited！"%(cur_date,bar_date,symbol))
+            return
+        if self.bars.get_latest_bar(symbol)['pct_chg'] <= -9.98 and order_amount < 0:
+            print("[%s][股票当日跌停]Time：%s，Symbol：%s，Trade Limited！"%(cur_date,bar_date,symbol))
             return
 
         # 市价单：委托价为收盘价
@@ -77,8 +88,8 @@ class SimulatedExecution(ExecutionHandler):
         if order_amount > 0 and order_price < last_close:
             order_price = last_close
 
-        # 处理order_amount，向下取整百
-        order_amount = int(order_amount/100)*100
+        # 处理order_amount，向下取整百（需要用floor处理负数）
+        order_amount = math.floor(order_amount/100)*100
         if order_amount == 0: # 委托数量为0，则中止运行
             print("[%s][委托数量错误]Time：%s，Symbol：%s，Price：%s，Qty：%s，Quantity Error！"%(cur_date,bar_date,symbol,order_price,order_amount))
             return
@@ -87,8 +98,9 @@ class SimulatedExecution(ExecutionHandler):
         commission = max(round(order_price*abs(order_amount)*self.commission_rate,2),self.min_commission)
 
         # 判断现金及持仓是否可用
-        if order_amount > 0: # 若买入，判断可用资金
-            if order_amount*order_price+commission > self.temp_pos['cash']:
+        if order_amount > 0: # 若买入，判断可用资金（暂不考虑手续费，现金可能出现负数）
+            #if order_amount*order_price+commission > self.temp_pos['cash']:
+            if order_amount*order_price > self.temp_pos['cash']:
                 # 可用资金不足，不执行买入
                 print("[%s][可用资金不足]Time：%s，Symbol：%s，Price：%s，Qty：%s，Cash Error！"%(cur_date,bar_date,symbol,order_price,order_amount))
                 return
@@ -119,10 +131,12 @@ class SimulatedExecution(ExecutionHandler):
         record['order_price'] = order_price
         record['order_amount'] = order_amount
         record['commission'] = commission
-        self.execution_records = self.execution_records.append(record, ignore_index=True)
+        #self.execution_records = self.execution_records.append(record, ignore_index=True)
+        self.execution_records.append(record)
 
     def download_records(self):
         """
         导出交易记录
         """
-        self.execution_records.to_csv('execution_records.csv')
+        execution_records = pd.DataFrame(self.execution_records)
+        execution_records.to_csv('logs/execution_records.csv')

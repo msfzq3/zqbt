@@ -18,9 +18,11 @@ class Portfolio(object):
         self.start_date = ContextInfo.start_date
         self.end_date = ContextInfo.end_date
 
-        # 历史持仓/市值，格式为DataFrame
-        self.all_positions = pd.DataFrame()
-        self.all_holdings = pd.DataFrame()
+        # 历史持仓/市值，格式为List
+        #self.all_positions = pd.DataFrame()
+        #self.all_holdings = pd.DataFrame()
+        self.all_positions = []
+        self.all_holdings = []
         # 实时持仓/市值，格式为Dictionary
         self.positions = self.set_positions()
         self.holdings = self.set_holdings()
@@ -69,8 +71,11 @@ class Portfolio(object):
             mkt_value += self.holdings[sym]
         self.holdings['mkt_value'] = self.holdings['cash']+mkt_value
 
-        self.all_positions = self.all_positions.append(self.positions,ignore_index=True)
-        self.all_holdings = self.all_holdings.append(self.holdings,ignore_index=True)
+        # 更新到历史持仓/市值列表
+        #self.all_positions = self.all_positions.append(self.positions,ignore_index=True)
+        #self.all_holdings = self.all_holdings.append(self.holdings,ignore_index=True)
+        self.all_positions.append(self.positions.copy())
+        self.all_holdings.append(self.holdings.copy())
 
     def update_fill(self, event):
         """
@@ -89,15 +94,18 @@ class Portfolio(object):
         """
         导出回测期间每日的持股数及市值
         """
-        df = pd.DataFrame()
-        df['date_time'] = self.all_positions['date_time']
-        df['cash'] = self.all_positions['cash']
-        for sym in self.symbol_list:
-            df['pos_'+sym] = self.all_positions[sym]
-            df['mkv_'+sym] = self.all_holdings[sym]
-        df['mkt_value'] = self.all_holdings['mkt_value']
+        all_positions = pd.DataFrame(self.all_positions)
+        all_holdings = pd.DataFrame(self.all_holdings)
 
-        df.to_csv('portfolios_records.csv')
+        df = pd.DataFrame()
+        df['date_time'] = all_positions['date_time']
+        df['cash'] = all_positions['cash']
+        for sym in self.symbol_list:
+            df['pos_'+sym] = all_positions[sym]
+            df['mkv_'+sym] = all_holdings[sym]
+        df['mkt_value'] = all_holdings['mkt_value']
+
+        df.to_csv('logs/portfolio_records.csv')
 
     def get_cash(self):
         """
@@ -105,8 +113,24 @@ class Portfolio(object):
         """
         return self.positions['cash']
 
+    def get_mkv(self):
+        """
+        获取总资产
+        """
+        return self.holdings['mkt_value']
+
     def get_position(self,sym):
         """
         获取单只股票的持仓数量
         """
         return self.positions[sym]
+
+    def get_positions(self):
+        """
+        获取所有持仓股票代码
+        """
+        current_pos = []
+        for sym in self.symbol_list:
+            if self.positions[sym] != 0:
+                current_pos.append(sym)
+        return current_pos

@@ -77,16 +77,18 @@ def cal_portfolio_alpha(df_networth,df_networth_benchmark,trade_days=252,risk_fr
     return alpha
 
 # 输出风险指标
-def output_performance(portfolios,csv_dir,benchmark):
+def output_performance(portfolios,benchmark):
     start_date = portfolios.start_date
     end_date = portfolios.end_date
 
-    df_benchmark = pd.read_csv(os.path.join(csv_dir,'%s.csv'%benchmark),encoding="gbk").dropna()
+    df_benchmark = pd.read_csv('database/sym_data/%s.csv'%benchmark,encoding="gbk").dropna()
     df_benchmark = df_benchmark[(df_benchmark['date_time']>=start_date)&(df_benchmark['date_time']<=end_date)].reset_index()
 
+    all_holdings = pd.DataFrame(portfolios.all_holdings)
+
     df = pd.DataFrame()
-    df['date_time'] = portfolios.all_holdings['date_time']
-    df['networth'] = portfolios.all_holdings['mkt_value']/portfolios.initial_capital
+    df['date_time'] = all_holdings['date_time']
+    df['networth'] = all_holdings['mkt_value']/portfolios.initial_capital
     df['networth_benchmark'] = df_benchmark['close']/df_benchmark['close'][0]
     df.index = df['date_time']
 
@@ -103,26 +105,28 @@ def output_performance(portfolios,csv_dir,benchmark):
     print("组合Alpha:",format(cal_portfolio_alpha(df['networth'],df['networth_benchmark']),'.3f'))
 
 # 绘制净值曲线
-def draw_plot(portfolios,csv_dir,benchmark):
+def draw_plot(portfolios,benchmark):
     start_date = portfolios.start_date
     end_date = portfolios.end_date
 
-    df_benchmark = pd.read_csv(os.path.join(csv_dir,'%s.csv'%benchmark),encoding="gbk").dropna()
+    df_benchmark = pd.read_csv('database/sym_data/%s.csv'%benchmark,encoding="gbk").dropna()
     df_benchmark = df_benchmark[(df_benchmark['date_time']>=start_date)&(df_benchmark['date_time']<=end_date)].reset_index()
 
+    all_holdings = pd.DataFrame(portfolios.all_holdings)
+
     df = pd.DataFrame()
-    df['date_time'] = portfolios.all_holdings['date_time']
-    df['networth'] = portfolios.all_holdings['mkt_value']/portfolios.initial_capital
+    df['date_time'] = all_holdings['date_time']
+    df['networth'] = all_holdings['mkt_value']/portfolios.initial_capital
     df['networth_benchmark'] = df_benchmark['close']/df_benchmark['close'][0]
 
     fig1 = plt.figure(figsize=(12,6))
     fig1.patch.set_facecolor('white')
     ax1 = fig1.add_subplot(111,ylabel='Networth')
-    ax1.set_title("Portfolio Networth Graph")
+    ax1.set_title("Portfolio Equity Curve")
     ax1.plot(df['date_time'],df['networth'],color='red',lw=1)
     ax1.plot(df['date_time'],df['networth_benchmark'],color='blue',linestyle='--',lw=0.5)
     # 设置X轴标签密度
-    trade_days = len(portfolios.all_holdings['date_time'])
+    trade_days = len(all_holdings['date_time'])
     ax1.xaxis.set_major_locator(ticker.MultipleLocator(int(trade_days/10)+1))
 
     # 标注最大回撤区间
@@ -131,7 +135,9 @@ def draw_plot(portfolios,csv_dir,benchmark):
         md_end = cal_drawdown(df['networth'])[2]
         ax1.plot(df['date_time'][md_start:md_end+1],df['networth'][md_start:md_end+1],color='green',lw=1)
 
-    plt.legend(('Portfolio','Benchmark','Max drawdown')) # 添加图例
+    plt.legend(('Equity','Benchmark','Max drawdown')) # 添加图例
     plt.xticks(rotation=15) # x轴旋转15度
     plt.grid(True) #显示网格
-    plt.show()
+    plt.savefig('logs/equity_curve.png')  # 回测曲线保存到本地
+    #plt.show()
+

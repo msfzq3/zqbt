@@ -17,7 +17,7 @@ class Order(object):
     def order_share(self, symbol, qty, price='MARKET'):
         if price == 'MARKET':  # 市价单则委托价为收盘价
             price = self.bars.get_latest_bar(symbol)['close']
-        if abs(qty) >= 100:
+        if qty >= 100 or qty < 0:
             my_order = OrderEvent(symbol, qty, price)
             self.events.put(my_order)
 
@@ -25,8 +25,8 @@ class Order(object):
     def order_value(self, symbol, value, price='MARKET'):
         if price == 'MARKET':  # 市价单则委托价为收盘价
             price = self.bars.get_latest_bar(symbol)['close']
-        qty = value / price  # 计算委托数量
-        if abs(qty) >= 100:
+        qty = value/price  # 计算委托数量
+        if qty >= 100 or qty < 0:
             my_order = OrderEvent(symbol, qty, price)
             self.events.put(my_order)
 
@@ -37,7 +37,7 @@ class Order(object):
         if price == 'MARKET': # 市价单则委托价为收盘价
             price = self.bars.get_latest_bar(symbol)['close']
         qty = value/price # 计算委托数量
-        if abs(qty) >= 100:
+        if qty >= 100 or qty < 0:
             my_order = OrderEvent(symbol, qty, price)
             self.events.put(my_order)
 
@@ -47,7 +47,7 @@ class Order(object):
         if price == 'MARKET': # 市价单则委托价为收盘价
             price = self.bars.get_latest_bar(symbol)['close']
         qty = target_share-cur_pos # 计算委托数量
-        if abs(qty) >= 100:
+        if qty >= 100 or qty < 0:
             my_order = OrderEvent(symbol, qty, price)
             self.events.put(my_order)
     '''
